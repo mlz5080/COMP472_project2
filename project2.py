@@ -181,7 +181,11 @@ def bigrams(V,smooth_value):
 									Vocabulary_bank[key][tr_list[3][index+1]+let] = smooth_value
 									Vocabulary_bank[key][let+tr_list[3][index+1]] = smooth_value
 
+							Vocabulary_bank[tr_list[2]][letter+letter] = smooth_value
+							Vocabulary_bank[tr_list[2]][tr_list[3][index+1]+letter] = smooth_value
+							Vocabulary_bank[tr_list[2]][tr_list[3][index+1]+tr_list[3][index+1]] = smooth_value
 							Vocabulary_bank[tr_list[2]][letter+tr_list[3][index+1]] = smooth_value
+
 							isalpha_set.add(tr_list[3][index+1])
 							isalpha_set.add(letter)
 
@@ -263,23 +267,30 @@ def trigrams(V,smooth_value):
 					except:
 						second_letter = tr_list[3][index+1]
 						third_letter = tr_list[3][index+2]
+						#################### RULE #1 if first letter in the bank #########################
 						if letter in isalpha_set:
-							if second_letter in isalpha_set
+							print("First letter in")
+						#################### RULE #1.1 if second letter in the bank ######################
+							if second_letter in isalpha_set:
 								for key in Vocabulary_bank:
 									for let in isalpha_set:
-										for let2 in isalpha_set
+										for let2 in isalpha_set:
 											Vocabulary_bank[key][let+let2+third_letter] = smooth_value
 											Vocabulary_bank[key][third_letter+let+let2] = smooth_value
 											Vocabulary_bank[key][let+third_letter+let2] = smooth_value
 								isalpha_set.add(third_letter)
+
+						#################### RULE #1.2 if third letter in the bank #######################
 							elif third_letter in isalpha_set:
 								for key in Vocabulary_bank:
 									for let in isalpha_set:
-										for let2 in isalpha_set
+										for let2 in isalpha_set:
 											Vocabulary_bank[key][let+let2+second_letter] = smooth_value
 											Vocabulary_bank[key][second_letter+let+let2] = smooth_value
 											Vocabulary_bank[key][let+second_letter+let2] = smooth_value
 								isalpha_set.add(second_letter)
+
+							################ RULE #1.3 if none other letter in the bank ##################
 							else:
 								temp = [second_letter,third_letter]
 								for key in Vocabulary_bank:
@@ -290,32 +301,47 @@ def trigrams(V,smooth_value):
 												Vocabulary_bank[key][let2+let+let3] = smooth_value
 												Vocabulary_bank[key][let2+let3+let] = smooth_value
 
-						elif tr_list[3][index+1] in mystr or tr_list[3][index+1].lower() in mystr:
+						#################### RULE #2 if second letter in the bank #########################							
+						elif second_letter in isalpha_set:
+							print("Second letter in")
+						#################### RULE #2.1 if third letter in the bank ######################
+							if third_letter in isalpha_set:
+								for key in Vocabulary_bank:
+									for let in isalpha_set:
+										for let2 in isalpha_set:
+											Vocabulary_bank[key][let+let2+letter] = smooth_value
+											Vocabulary_bank[key][letter+let+let2] = smooth_value
+											Vocabulary_bank[key][let+letter+let2] = smooth_value
+								isalpha_set.add(letter)
+							else:
+								temp = [letter,third_letter]
+								for key in Vocabulary_bank:
+									for let in isalpha_set:
+										for let2 in temp:
+											for let3 in temp:
+												Vocabulary_bank[key][let+let2+let3] = smooth_value
+												Vocabulary_bank[key][let2+let+let3] = smooth_value
+												Vocabulary_bank[key][let2+let3+let] = smooth_value
+						elif third_letter in isalpha_set:
+							temp = [letter,second_letter]
 							for key in Vocabulary_bank:
-								for let in mystr:
-									Vocabulary_bank[key][letter+let] = smooth_value
-									Vocabulary_bank[key][let+letter] = smooth_value
-									Vocabulary_bank[key][letter+let.upper()] = smooth_value
-									Vocabulary_bank[key][let.upper()+letter] = smooth_value
+								for let in isalpha_set:
+									for let2 in temp:
+										for let3 in temp:
+											Vocabulary_bank[key][let+let2+let3] = smooth_value
+											Vocabulary_bank[key][let2+let+let3] = smooth_value
+											Vocabulary_bank[key][let2+let3+let] = smooth_value
 						else:
+							print("None letter in")
+							temp = [letter,second_letter,third_letter]
 							for key in Vocabulary_bank:
-								Vocabulary_bank[key][letter+tr_list[3][index+1]] = smooth_value
-							if letter+"a" not in Vocabulary_bank[tr_list[2]]:
-								for key in Vocabulary_bank:
-									for let in mystr:
-										Vocabulary_bank[key][letter+let] = smooth_value
-										Vocabulary_bank[key][let+letter] = smooth_value
-										Vocabulary_bank[key][letter+let.upper()] = smooth_value
-										Vocabulary_bank[key][let.upper()+letter] = smooth_value
-							elif tr_list[3][index+1]+"a" not in Vocabulary_bank[tr_list[2]]:
-								for key in Vocabulary_bank:
-									for let in mystr:
-										#print(let)
-										Vocabulary_bank[key][tr_list[3][index+1]+let] = smooth_value
-										Vocabulary_bank[key][let+tr_list[3][index+1]] = smooth_value
-										Vocabulary_bank[key][tr_list[3][index+1]+let.upper()] = smooth_value
-										Vocabulary_bank[key][let.upper()+tr_list[3][index+1]] = smooth_value
-						Vocabulary_bank[tr_list[2]][letter+tr_list[3][index+1]]+=1
+								for let in temp:
+									for let2 in temp:
+										for let3 in temp:
+											Vocabulary_bank[key][let+let2+let3] = smooth_value
+											Vocabulary_bank[key][let2+let+let3] = smooth_value
+											Vocabulary_bank[key][let2+let3+let] = smooth_value
+						Vocabulary_bank[tr_list[2]][letter+tr_list[3][index+1]+tr_list[3][index+2]]+=1
 
 		################# Result #################
 		print(pd.DataFrame.from_dict(Vocabulary_bank).T)
