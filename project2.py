@@ -5,16 +5,17 @@ import operator
 import subprocess
 
 
-def parse_file(test_file,training_file):
-	if test_file==None and training_file==None:
-		test_file = "./OriginalDataSet/test-tweets-given.txt"
+def parse_file(training_file,testing_file):
+	if testing_file==None:
+		testing_file = "./OriginalDataSet/test-tweets-given.txt"
+	if training_file==None:
 		training_file = "./OriginalDataSet/training-tweets.txt"
 
 	test_string = ""
 	test_list=[]
 	training_string = ""
 	training_list=[]
-	with open(test_file, "r") as file:
+	with open(testing_file, "r") as file:
 		for line in file:
 			test_list.append(line)
 
@@ -27,14 +28,15 @@ def parse_file(test_file,training_file):
 def initialize_score(df,total):
 	Score={}
 	for i in df.keys():
+		#print(df[i],total)
 		Score[i]=math.log10(df[i]/total)
-		#Score[i]=0
+		#print(i,df[i],total)
+	#print(max(Score.items(), key=operator.itemgetter(1))[0])
 	return Score
 
 def initialize_score_byom(df,total):
 	Score={}
 	for i in df.keys():
-		#Score[i]=math.log10(df[i]/total)
 		Score[i]=0
 	return Score
 
@@ -48,6 +50,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 	Vocabulary_bank['en'] = {}
 	Vocabulary_bank['pt'] = {}
 
+	sentences_counter={}
 	Precision = {}
 	Recall = {}
 	F1 = {}
@@ -59,6 +62,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 	eval_model = ""
 
 	for key in Vocabulary_bank:
+		sentences_counter[key]=0
 		Precision[key]=[0.0,0.0]
 		Recall[key] = [0.0,0.0]
 		F1[key] = 0
@@ -83,6 +87,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 		for tr_str in training_lists:
 			tr_list = tr_str.split("\t")
 			filtered_str = re.sub(r"[^A-Za-z]+", '', tr_list[3]).lower()
+			sentences_counter[tr_list[2]]+=1
 			#print(filtered_str)
 			for letter in filtered_str:
 				#print(tr_list[2])
@@ -93,25 +98,25 @@ def unigrams(V,smooth_value,debug,training,testing):
 		sum_column = df.sum(axis=1)
 		sum_row = df.sum(axis=0)
 		#print(df)
-		total_sentences = sum_column.sum()
+		total_sentences = len(training_lists)
 		
 		for test in test_lists:
 			if len(test.split("\t"))==4:
 				output+= test.split("\t")[0]+ "  "
 				actual = test.split("\t")[2]
-				Score = initialize_score(sum_column,total_sentences)
+				Score = initialize_score(sentences_counter,total_sentences)
 
 				str_test = test.split("\t")[3]
 				filtered_str = re.sub(r"[^A-Za-z]+", '', str_test).lower()
 				for letter in filtered_str:
 					for key in Score:
 						try:
-						
-							#print(key,df[letter][key],sum_row[letter],df[letter][key]/sum_column[key])
-							#print(key,df[letter][key],sum_row[letter])
 							Score[key]+= math.log10(df[letter][key]/sum_column[key])
 						except:
-							Score[key]+= math.log10(smooth_value/sum_column[key])
+							if smooth_value!=0:
+								Score[key]+= math.log10(smooth_value/sum_column[key])
+							else:
+								Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 				#print(Score)
 				################# Building evaluation #################
 				test_result = max(Score.items(), key=operator.itemgetter(1))[0]
@@ -141,7 +146,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 			for test in training_lists:
 				if len(test.split("\t"))==4:
 					actual = test.split("\t")[2]
-					Score_test = initialize_score(sum_column,total_sentences)
+					Score_test = initialize_score(sentences_counter,total_sentences)
 					str_test = test.split("\t")[3]
 					filtered_str = re.sub(r"[^A-Za-z]+", '', str_test).lower()
 					for letter in filtered_str:
@@ -155,7 +160,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 					#True positive
 					if(test_result in actual):
 						correct_test+=1				
-						total_test+=1
+					total_test+=1
 			print("Test on training set. The acuracy is ",correct_test/total_test)
 
 
@@ -204,6 +209,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 		for tr_str in training_lists:
 			tr_list = tr_str.split("\t")
 			filtered_str = re.sub(r"[^A-Za-z]+", '', tr_list[3])
+			sentences_counter[tr_list[2]]+=1
 			for letter in filtered_str:
 				Vocabulary_bank[tr_list[2]][letter]+=1
 
@@ -212,14 +218,14 @@ def unigrams(V,smooth_value,debug,training,testing):
 		sum_column = df.sum(axis=1)
 		sum_row = df.sum(axis=0)
 		#print(df)
-		total_sentences = sum_column.sum()
+		total_sentences = len(training_lists)
 		correct_result = 0
 		total = 0
 		for test in test_lists:
 			if len(test.split("\t"))==4:
 				output+= test.split("\t")[0]+ "  "
 				actual = test.split("\t")[2]
-				Score = initialize_score(sum_column,total_sentences)
+				Score = initialize_score(sentences_counter,total_sentences)
 
 				str_test = test.split("\t")[3]
 				filtered_str = re.sub(r"[^A-Za-z]+", '', str_test)
@@ -229,7 +235,10 @@ def unigrams(V,smooth_value,debug,training,testing):
 							#print(key,df[letter][key],sum_row[letter])
 							Score[key]+= math.log10(df[letter][key]/sum_column[key])
 					except:
-						Score[key]+= math.log10(smooth_value/sum_column[key])
+						if smooth_value!=0:
+							Score[key]+= math.log10(smooth_value/sum_column[key])
+						else:
+							Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 						#print("exception")
 				#print(Score)
 				################# Building evaluation #################
@@ -261,7 +270,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 			for test in training_lists:
 				if len(test.split("\t"))==4:
 					actual = test.split("\t")[2]
-					Score_test = initialize_score(sum_column,total_sentences)
+					Score_test = initialize_score(sentences_counter,total_sentences)
 					str_test = test.split("\t")[3]
 					filtered_str = re.sub(r"[^A-Za-z]+", '', str_test)
 					for letter in filtered_str:
@@ -277,7 +286,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 					#True positive
 					if(test_result in actual):
 						correct_test+=1				
-						total_test+=1
+					total_test+=1
 			print("Test on training set. The acuracy is ",correct_test/total_test)
 
 		################# Evaluation of model #################
@@ -325,6 +334,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 		################# Training for V = 2 #################	
 		for tr_str in training_lists:
 			tr_list = tr_str.split("\t")
+			sentences_counter[tr_list[2]]+=1
 			for letter in tr_list[3]:
 				if letter.isalpha():
 					try:
@@ -339,14 +349,14 @@ def unigrams(V,smooth_value,debug,training,testing):
 		sum_column = df.sum(axis=1)
 		sum_row = df.sum(axis=0)
 		#print(df)
-		total_sentences = sum_column.sum()
+		total_sentences = len(training_lists)
 		correct_result = 0
 		total = 0
 		for test in test_lists:
 			if len(test.split("\t"))==4:
 				output+= test.split("\t")[0]+ "  "
 				actual = test.split("\t")[2]
-				Score = initialize_score(sum_column,total_sentences)
+				Score = initialize_score(sentences_counter,total_sentences)
 
 				str_test = test.split("\t")[3]
 				for letter in str_test:
@@ -356,7 +366,10 @@ def unigrams(V,smooth_value,debug,training,testing):
 								#print(key,df[letter][key],sum_row[letter])
 								Score[key]+= math.log10(df[letter][key]/sum_column[key])
 							except:
-								Score[key]+= math.log10(smooth_value/sum_column[key])
+								if smooth_value!=0:
+									Score[key]+= math.log10(smooth_value/sum_column[key])
+								else:
+									Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 						#print("exception")
 
 				################# Building evaluation #################
@@ -387,7 +400,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 			for test in training_lists:
 				if len(test.split("\t"))==4:
 					actual = test.split("\t")[2]
-					Score_test = initialize_score(sum_column,total_sentences)
+					Score_test = initialize_score(sentences_counter,total_sentences)
 					str_test = test.split("\t")[3]
 					for letter in str_test:
 						if letter.isalpha():
@@ -402,7 +415,7 @@ def unigrams(V,smooth_value,debug,training,testing):
 					#True positive
 					if(test_result in actual):
 						correct_test+=1				
-						total_test+=1
+					total_test+=1
 			print("Test on training set. The acuracy is ",correct_test/total_test)
 
 		################# Evaluation of model #################
@@ -470,7 +483,9 @@ def bigrams(V,smooth_value,debug,training,testing):
 	output = ""
 	eval_model = ""
 	key_list = ["eu","ca","gl","es","en","pt"]
+	sentences_counter={}
 	for key in Vocabulary_bank:
+		sentences_counter[key]=0
 		Precision[key]=[0.0,0.0]
 		Recall[key] = [0.0,0.0]
 		F1[key] = 0
@@ -485,6 +500,7 @@ def bigrams(V,smooth_value,debug,training,testing):
 		################# Training for V = 0 #################		
 		for tr_str in training_lists:
 			tr_list = tr_str.split("\t")
+			sentences_counter[tr_list[2]]+=1
 			#print(filtered_str)
 			for index,letter in enumerate(tr_list[3]):
 				if letter.lower() in lowercase_set:
@@ -496,14 +512,15 @@ def bigrams(V,smooth_value,debug,training,testing):
 		sum_column = df.sum(axis=1)
 		sum_row = df.sum(axis=0)
 		#print(df)
-		total_sentences = sum_column.sum()
+		total_sentences = len(training_lists)
 		correct_result = 0
 		total = 0
 		for test in test_lists:
 			if len(test.split("\t"))==4:
 				output+= test.split("\t")[0]+ "  "
 				actual = test.split("\t")[2]
-				Score = initialize_score(sum_column,total_sentences)
+				print(sentences_counter)
+				Score = initialize_score(sentences_counter,total_sentences)
 
 				str_test = test.split("\t")[3]
 				for index,letter in enumerate(str_test):
@@ -514,7 +531,10 @@ def bigrams(V,smooth_value,debug,training,testing):
 								#print(key,df[letter][key],sum_row[letter])
 									Score[key]+= math.log10(df[letter.lower()+str_test[index+1].lower()][key]/sum_column[key])
 								except:
-									Score[key]+= math.log10(smooth_value/sum_column[key])
+									if smooth_value!=0:
+										Score[key]+= math.log10(smooth_value/sum_column[key])
+									else:
+										Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 									#print("exception",letter.lower()+str_test[index+1].lower(),key)
 
 				################# Building evaluation #################
@@ -544,7 +564,7 @@ def bigrams(V,smooth_value,debug,training,testing):
 			for test in training_lists:
 				if len(test.split("\t"))==4:
 					actual = test.split("\t")[2]
-					Score_test = initialize_score(sum_column,total_sentences)
+					Score_test = initialize_score(sentences_counter,total_sentences)
 					str_test = test.split("\t")[3]
 					for index,letter in enumerate(str_test):
 						if letter.lower() in lowercase_set:
@@ -554,13 +574,16 @@ def bigrams(V,smooth_value,debug,training,testing):
 									#print(key,df[letter][key],sum_row[letter])
 										Score_test[key]+= math.log10(df[letter.lower()+str_test[index+1].lower()][key]/sum_column[key])
 									except:
-										Score[key]+= math.log10(smooth_value/sum_column[key])
+										if smooth_value!=0:
+											Score[key]+= math.log10(smooth_value/sum_column[key])
+										else:
+											Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 
 					test_result = max(Score_test.items(), key=operator.itemgetter(1))[0]
 					#True positive
 					if(test_result in actual):
 						correct_test+=1				
-						total_test+=1
+					total_test+=1
 			print("Test on training set. The acuracy is ",correct_test/total_test)
 
 		################# Evaluation of model #################
@@ -611,6 +634,7 @@ def bigrams(V,smooth_value,debug,training,testing):
 		################# Training for V = 0 #################		
 		for tr_str in training_lists:
 			tr_list = tr_str.split("\t")
+			sentences_counter[tr_list[2]]+=1
 			#print(filtered_str)
 			for index,letter in enumerate(tr_list[3]):
 				if letter.lower() in set(string.ascii_letters):
@@ -619,31 +643,40 @@ def bigrams(V,smooth_value,debug,training,testing):
 
 		################# Result #################
 		df = pd.DataFrame.from_dict(Vocabulary_bank).T
+		#df.T.to_csv("Bigram_Values.txt", sep='\t')
 		sum_column = df.sum(axis=1)
 		sum_row = df.sum(axis=0)
+		#print(sum_column)
+		#print(sentences_counter)
 		#print(df)
 
-		total_sentences = sum_column.sum()
+		total_sentences = len(training_lists)
 		correct_result = 0
 		total = 0
 		for test in test_lists:
 			if len(test.split("\t"))==4:
 				output+= test.split("\t")[0]+ "  "
 				actual = test.split("\t")[2]
-				Score = initialize_score(sum_column,total_sentences)
+				Score = initialize_score(sentences_counter,total_sentences)
 
 				str_test = test.split("\t")[3]
 				for index,letter in enumerate(str_test):
 					if letter in letter_set:
 						if index<(len(str_test)-1) and str_test[index+1] in letter_set:
+							#print("New round")
 							for key in Score:
 								try:
-								#print(key,df[letter][key],sum_row[letter])
-									Score[key]+= math.log10(df[letter+str_test[index+1]][key]/sum_column[key])
+									#print(key,df[letter+str_test[index+1]][key],sum_column[key])
+									#print(key,df[letter+str_test[index+1]][key],sum_column[key])
+									Score[key] += math.log10(df[letter+str_test[index+1]][key]/sum_column[key])
+									#print(key,sum_column[key])
+									#print(Score)
 								except:
-									Score[key]+= math.log10(smooth_value/sum_column[key])
+									if smooth_value!=0:
+										Score[key]+= math.log10(smooth_value/sum_column[key])
+									else:
+										Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 									#print("exception",letter+str_test[index+1],key)
-				
 				################# Building evaluation #################
 				test_result = max(Score.items(), key=operator.itemgetter(1))[0]
 				output+= test_result + "  " + str(Score[test_result]) + "  " +actual
@@ -673,7 +706,7 @@ def bigrams(V,smooth_value,debug,training,testing):
 			for test in training_lists:
 				if len(test.split("\t"))==4:
 					actual = test.split("\t")[2]
-					Score_test = initialize_score(sum_column,total_sentences)
+					Score_test = initialize_score(sentences_counter,total_sentences)
 					str_test = test.split("\t")[3]
 					for index,letter in enumerate(str_test):
 						if letter in letter_set:
@@ -683,13 +716,16 @@ def bigrams(V,smooth_value,debug,training,testing):
 									#print(key,df[letter][key],sum_row[letter])
 										Score_test[key]+= math.log10(df[letter+str_test[index+1]][key]/sum_column[key])
 									except:
-										Score[key]+= math.log10(smooth_value/sum_column[key])
+										if smooth_value!=0:
+											Score[key]+= math.log10(smooth_value/sum_column[key])
+										else:
+											Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 										#print("exception",letter+str_test[index+1],key)
 					test_result = max(Score_test.items(), key=operator.itemgetter(1))[0]
 					#True positive
 					if(test_result in actual):
 						correct_test+=1				
-						total_test+=1
+					total_test+=1
 			print("Test on training set. The acuracy is ",correct_test/total_test)
 
 		################# Evaluation of model #################
@@ -737,6 +773,7 @@ def bigrams(V,smooth_value,debug,training,testing):
 		################# Training for V = 2 #################	
 		for tr_str in training_lists:
 			tr_list = tr_str.split("\t")
+			sentences_counter[tr_list[2]]+=1
 			for index,letter in enumerate(tr_list[3]):
 				if index<(len(tr_list[3])-1) and (letter.isalpha() and tr_list[3][index+1].isalpha()):
 					try:
@@ -781,14 +818,15 @@ def bigrams(V,smooth_value,debug,training,testing):
 		sum_row = df.sum(axis=0)
 		#print(df)
 
-		total_sentences = sum_column.sum()
+		total_sentences = len(training_lists)
 		correct_result = 0
 		total = 0
 		for test in test_lists:
 			if len(test.split("\t"))==4:
 				output+= test.split("\t")[0]+ "  "
 				actual = test.split("\t")[2]
-				Score = initialize_score_byom(sum_column,total_sentences)
+				#print(sentences_counter)
+				Score = initialize_score(sentences_counter,total_sentences)
 				str_test = test.split("\t")[3]
 				for index,letter in enumerate(str_test):
 					if letter.isalpha():
@@ -798,7 +836,10 @@ def bigrams(V,smooth_value,debug,training,testing):
 								#print(key,df[letter][key],sum_row[letter])
 									Score[key]+= math.log10(df[letter+str_test[index+1]][key]/sum_column[key])
 								except:
-									Score[key]+= math.log10(smooth_value/sum_column[key])
+									if smooth_value!=0:
+										Score[key]+= math.log10(smooth_value/sum_column[key])
+									else:
+										Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 									#print("exception",letter+str_test[index+1],key)
 				
 				################# Building evaluation #################
@@ -829,7 +870,7 @@ def bigrams(V,smooth_value,debug,training,testing):
 			for test in training_lists:
 				if len(test.split("\t"))==4:
 					actual = test.split("\t")[2]
-					Score_test = initialize_score(sum_column,total_sentences)
+					Score_test = initialize_score(sentences_counter,total_sentences)
 					str_test = test.split("\t")[3]
 					for index,letter in enumerate(str_test):
 						if letter.isalpha():
@@ -845,7 +886,7 @@ def bigrams(V,smooth_value,debug,training,testing):
 					#True positive
 					if(test_result in actual):
 						correct_test+=1				
-						total_test+=1
+					total_test+=1
 			print("Test on training set. The acuracy is ",correct_test/total_test)
 
 
@@ -914,7 +955,9 @@ def trigrams(V,smooth_value,debug,training,testing):
 	output = ""
 	eval_model = ""
 	key_list = ["eu","ca","gl","es","en","pt"]
+	sentences_counter={}
 	for key in Vocabulary_bank:
+		sentences_counter[key]=0
 		Precision[key]=[0.0,0.0]
 		Recall[key] = [0.0,0.0]
 		F1[key] = 0
@@ -930,24 +973,31 @@ def trigrams(V,smooth_value,debug,training,testing):
 		################# Training for V = 0 #################		
 		for tr_str in training_lists:
 			tr_list = tr_str.split("\t")
+			sentences_counter[tr_list[2]]+=1
 			for index,letter in enumerate(tr_list[3]):
 				if letter.lower() in lowercase_set:
 					if (index<(len(tr_list[3])-2) and index<(len(tr_list[3])-1)) and (tr_list[3][index+1].lower() in lowercase_set and tr_list[3][index+2].lower() in lowercase_set):
+						#print(letter.lower()+tr_list[3][index+1].lower()+tr_list[3][index+2].lower())
 						Vocabulary_bank[tr_list[2]][letter.lower()+tr_list[3][index+1].lower()+tr_list[3][index+2].lower()]+=1
 
 		################# Result #################
 		df = pd.DataFrame.from_dict(Vocabulary_bank).T
-		sum_column = df.sum(axis=1)
-		sum_row = df.sum(axis=0)
 		#print(df)
-		total_sentences = sum_column.sum()
+		sum_column = df.sum(axis=1)
+		print(sum_column)
+		sum_row = df.sum(axis=0)
+		print(sum_row)
+		#print(df)
+		total_sentences = len(training_lists)
+		print(total_sentences)
 		correct_result = 0
 		total = 0
 
 		for test in test_lists:
 			if len(test.split("\t"))==4:
 				actual = test.split("\t")[2]
-				Score = initialize_score(sum_column,total_sentences)
+				Score = initialize_score(sentences_counter,total_sentences)
+				#print(Score)
 				output+= test.split("\t")[0]+ "  "
 				str_test = test.split("\t")[3]
 
@@ -959,10 +1009,13 @@ def trigrams(V,smooth_value,debug,training,testing):
 								try:
 								#print(key,df[letter][key],sum_row[letter])
 									Score[key]+= math.log10(df[ch][key]/sum_column[key])
-								except:
-									Score[key]+= math.log10(smooth_value/sum_column[key])
+								except Exception as inst:
+									if smooth_value!=0:
+										Score[key]+= math.log10(smooth_value/sum_column[key])
+									else:
+										Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 									#print("exception",ch,actual)
-
+							#print(Score)
 				################# Building evaluation #################
 				test_result = max(Score.items(), key=operator.itemgetter(1))[0]
 				output+= test_result + "  " + str(Score[test_result]) + "  " +actual
@@ -987,12 +1040,13 @@ def trigrams(V,smooth_value,debug,training,testing):
 
 		total_test=0
 		correct_test=0
+		counter=0
 		if debug:
 			################# Test on Training set #####################
 			for test in training_lists:
 				if len(test.split("\t"))==4:
 					actual = test.split("\t")[2]
-					Score_test = initialize_score(sum_column,total_sentences)
+					Score_test = initialize_score(sentences_counter,total_sentences)
 					str_test = test.split("\t")[3]
 
 					for index,letter in enumerate(str_test):
@@ -1001,12 +1055,16 @@ def trigrams(V,smooth_value,debug,training,testing):
 								ch = letter.lower()+str_test[index+1].lower()+str_test[index+2].lower()
 								for key in Score_test:
 									try:
+										#print(key)
 									#print(key,df[letter][key],sum_row[letter])
 										Score_test[key]+= math.log10(df[ch][key]/sum_column[key])
+										counter+=1
 									except:
 										pass
+										#print("not here")
 										#print("exception",ch,actual)
 					test_result = max(Score_test.items(), key=operator.itemgetter(1))[0]
+					#print(test_result)
 					#True positive
 					if(test_result in actual):
 						correct_test+=1
@@ -1058,6 +1116,7 @@ def trigrams(V,smooth_value,debug,training,testing):
 		################# Training for V = 0 #################		
 		for tr_str in training_lists:
 			tr_list = tr_str.split("\t")
+			sentences_counter[tr_list[2]]+=1
 			for index,letter in enumerate(tr_list[3]):
 				if letter in letter_set:
 					if (index<(len(tr_list[3])-2) and index<(len(tr_list[3])-1)) and (tr_list[3][index+1] in letter_set and tr_list[3][index+2] in letter_set):
@@ -1068,13 +1127,13 @@ def trigrams(V,smooth_value,debug,training,testing):
 		sum_column = df.sum(axis=1)
 		sum_row = df.sum(axis=0)
 		#print(df)
-		total_sentences = sum_column.sum()
+		total_sentences = len(training_lists)
 		correct_result = 0
 		total = 0
 		for test in test_lists:
 			if len(test.split("\t"))==4:
 				actual = test.split("\t")[2]
-				Score = initialize_score(sum_column,total_sentences)
+				Score = initialize_score(sentences_counter,total_sentences)
 				output+= test.split("\t")[0]+ "  "
 				str_test = test.split("\t")[3]
 
@@ -1087,7 +1146,10 @@ def trigrams(V,smooth_value,debug,training,testing):
 								#print(key,df[letter][key],sum_row[letter])
 									Score[key]+= math.log10(df[ch][key]/sum_column[key])
 								except:
-									Score[key]+= math.log10(smooth_value/sum_column[key])
+									if smooth_value!=0:
+										Score[key]+= math.log10(smooth_value/sum_column[key])
+									else:
+										Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 									#print("exception",ch,actual)
 
 				################# Building evaluation #################
@@ -1120,7 +1182,7 @@ def trigrams(V,smooth_value,debug,training,testing):
 			for test in training_lists:
 				if len(test.split("\t"))==4:
 					actual = test.split("\t")[2]
-					Score_test = initialize_score(sum_column,total_sentences)
+					Score_test = initialize_score(sentences_counter,total_sentences)
 					str_test = test.split("\t")[3]
 
 					for index,letter in enumerate(str_test):
@@ -1188,6 +1250,7 @@ def trigrams(V,smooth_value,debug,training,testing):
 		################# Training for V = 2 #################	
 		for tr_str in training_lists:
 			tr_list = tr_str.split("\t")
+			sentences_counter[tr_list[2]]+=1
 			for index,letter in enumerate(tr_list[3]):
 				if (index<(len(tr_list[3])-1) and index<(len(tr_list[3])-2)) and (letter.isalpha() and tr_list[3][index+1].isalpha() and tr_list[3][index+2].isalpha()):
 					try:
@@ -1276,13 +1339,13 @@ def trigrams(V,smooth_value,debug,training,testing):
 		sum_column = df.sum(axis=1)
 		sum_row = df.sum(axis=0)
 		#print(df)
-		total_sentences = sum_column.sum()
+		total_sentences = len(training_lists)
 		correct_result = 0
 		total = 0
 		for test in test_lists:
 			if len(test.split("\t"))==4:
 				actual = test.split("\t")[2]
-				Score = initialize_score(sum_column,total_sentences)
+				Score = initialize_score(sentences_counter,total_sentences)
 				output+= test.split("\t")[0]+ "  "
 
 				str_test = test.split("\t")[3]
@@ -1295,7 +1358,10 @@ def trigrams(V,smooth_value,debug,training,testing):
 								#print(key,df[letter][key],sum_row[letter])
 									Score[key]+= math.log10(df[ch][key]/sum_column[key])
 								except:
-									Score[key]+= math.log10(smooth_value/sum_column[key])
+									if smooth_value!=0:
+										Score[key]+= math.log10(smooth_value/sum_column[key])
+									else:
+										Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 									#print("exception",ch,actual)
 
 				################# Building evaluation #################
@@ -1327,7 +1393,7 @@ def trigrams(V,smooth_value,debug,training,testing):
 			for test in training_lists:
 				if len(test.split("\t"))==4:
 					actual = test.split("\t")[2]
-					Score_test = initialize_score(sum_column,total_sentences)
+					Score_test = initialize_score(sentences_counter,total_sentences)
 					str_test = test.split("\t")[3]
 					for index,letter in enumerate(str_test):
 						if letter.isalpha():
@@ -1413,7 +1479,9 @@ def BYOM(smooth_value,training,testing,debug):
 	eval_model = ""
 	key_list = ["eu","ca","gl","es","en","pt"]
 	case1,case2,case3=False,False,False
+	sentences_counter={}
 	for key in Vocabulary_bank:
+		sentences_counter[key]=0
 		Precision[key]=[0.0,0.0]
 		Recall[key] = [0.0,0.0]
 		F1[key] = 0
@@ -1428,6 +1496,7 @@ def BYOM(smooth_value,training,testing,debug):
 	for tr_str in training_lists:
 		tr_list = tr_str.split("\t")
 		wordlist = tr_list[3].split(" ")
+		sentences_counter[tr_list[2]]+=1
 		for index,word in enumerate(wordlist):
 
 			if(determine_word(word.translate(str.maketrans('', '', string.punctuation)))):
@@ -1461,6 +1530,7 @@ def BYOM(smooth_value,training,testing,debug):
 			
 			case1,case2,case3=False,False,False
 
+	
 	################# Training for V = 2 #################	
 	for tr_str in training_lists:
 		tr_list = tr_str.split("\t")
@@ -1550,17 +1620,17 @@ def BYOM(smooth_value,training,testing,debug):
 	################# Result #################
 
 	df = pd.DataFrame.from_dict(Vocabulary_bank).T
-	
+	#df.T.to_csv("Values.txt", sep='\t')
 	sum_column = df.sum(axis=1)
 	sum_row = df.sum(axis=0)
 	#print(df)
-	total_sentences = sum_column.sum()
+	total_sentences = len(training_lists)
 	correct_result = 0
 	total = 0
 	for test in test_lists:
 		if len(test.split("\t"))==4:
 			actual = test.split("\t")[2]
-			Score = initialize_score(sum_column,total_sentences)
+			Score = initialize_score_byom(sentences_counter,total_sentences)
 			output+= test.split("\t")[0]+ "  "
 
 			str_test = test.split("\t")[3]
@@ -1573,7 +1643,10 @@ def BYOM(smooth_value,training,testing,debug):
 							#print(key,df[letter][key],sum_row[letter])
 								Score[key]+= math.log10(df[ch][key]/sum_column[key])
 							except:
-								Score[key]+= math.log10(smooth_value/sum_column[key])
+								if smooth_value!=0:
+									Score[key]+= math.log10(smooth_value/sum_column[key])
+								else:
+									Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 								#print("exception",ch,actual)
 
 			
@@ -1594,19 +1667,28 @@ def BYOM(smooth_value,training,testing,debug):
 						try:
 							Score[key]+= math.log10(df[ch1][key]/sum_column[key])
 						except:
-							Score[key]+= math.log10(smooth_value/sum_column[key])
+							if smooth_value!=0:
+								Score[key]+= math.log10(smooth_value/sum_column[key])
+							else:
+								Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 				if case2:
 					for key in Score:
 						try:
 							Score[key]+= math.log10(df[ch2][key]/sum_column[key])
 						except:
-							Score[key]+= math.log10(smooth_value/sum_column[key])
+							if smooth_value!=0:
+								Score[key]+= math.log10(smooth_value/sum_column[key])
+							else:
+								Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 				if case3:
 					for key in Score:
 						try:
 							Score[key]+= math.log10(df[ch3][key]/sum_column[key])
 						except:
-							Score[key]+= math.log10(smooth_value/sum_column[key])
+							if smooth_value!=0:
+								Score[key]+= math.log10(smooth_value/sum_column[key])
+							else:
+								Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 					
 			case1,case2,case3=False,False,False
 
@@ -1629,7 +1711,7 @@ def BYOM(smooth_value,training,testing,debug):
 
 		#print("Test result is:",max(Score),"with a score of",Score[max(Score)],"\nActual result is:",actual,"\n")
 	print("The accuracy is",correct_result/total)
-	with open("trace_BYOM_"+str(smooth_value)+".txt","w") as file:
+	with open("Demo_trace_BYOM_"+str(smooth_value)+".txt","w") as file:
 		file.write(output)
 
 	if debug:
@@ -1640,7 +1722,7 @@ def BYOM(smooth_value,training,testing,debug):
 		for test in training_lists:
 			if len(test.split("\t"))==4:
 				actual = test.split("\t")[2]
-				Score_test = initialize_score(sum_column,total_sentences)
+				Score_test = initialize_score(sentences_counter,total_sentences)
 				str_test = test.split("\t")[3]
 				for index,letter in enumerate(str_test):
 					if letter.isalpha():
@@ -1691,7 +1773,7 @@ def BYOM(smooth_value,training,testing,debug):
 			average_F1+= Recall[key][1] * 2 * pre_temp*re_temp/(pre_temp+re_temp)
 			eval_model+="{:.4f}".format(2 * pre_temp*re_temp/(pre_temp+re_temp))+"  "
 	eval_model+="\n"+ "{:.4f}".format(macro_F1/len(key_list)) +"  " + "{:.4f}".format(average_F1/total)
-	with open("eval_BYOM_.txt","w") as file:
+	with open("Demo_eval_BYOM_.txt","w") as file:
 		file.write(eval_model)
 
 def BYOM_bigram(smooth_value,training,testing,debug):
@@ -1724,8 +1806,10 @@ def BYOM_bigram(smooth_value,training,testing,debug):
 	output = ""
 	eval_model = ""
 	key_list = ["eu","ca","gl","es","en","pt"]
+	sentences_counter={}
 	case1,case2,case3=False,False,False
 	for key in Vocabulary_bank:
+		sentences_counter[key]=0
 		Precision[key]=[0.0,0.0]
 		Recall[key] = [0.0,0.0]
 		F1[key] = 0
@@ -1740,6 +1824,7 @@ def BYOM_bigram(smooth_value,training,testing,debug):
 	for tr_str in training_lists:
 		tr_list = tr_str.split("\t")
 		wordlist = tr_list[3].split(" ")
+		sentences_counter[tr_list[2]]+=1
 		for index,word in enumerate(wordlist):
 
 			if(determine_word(word.translate(str.maketrans('', '', string.punctuation)))):
@@ -1819,13 +1904,13 @@ def BYOM_bigram(smooth_value,training,testing,debug):
 	sum_column = df.sum(axis=1)
 	sum_row = df.sum(axis=0)
 	#print(df)
-	total_sentences = sum_column.sum()
+	total_sentences = len(training_lists)
 	correct_result = 0
 	total = 0
 	for test in test_lists:
 		if len(test.split("\t"))==4:
 			actual = test.split("\t")[2]
-			Score = initialize_score(sum_column,total_sentences)
+			Score = initialize_score(sentences_counter,total_sentences)
 			output+= test.split("\t")[0]+ "  "
 
 			str_test = test.split("\t")[3]
@@ -1837,7 +1922,10 @@ def BYOM_bigram(smooth_value,training,testing,debug):
 						#print(key,df[letter][key],sum_row[letter])
 							Score[key]+= math.log10(df[ch][key]/sum_column[key])
 						except:
-							Score[key]+= math.log10(smooth_value/sum_column[key])
+							if smooth_value!=0:
+								Score[key]+= math.log10(smooth_value/sum_column[key])
+							else:
+								Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 							#print("exception",ch,actual)
 
 			
@@ -1858,19 +1946,28 @@ def BYOM_bigram(smooth_value,training,testing,debug):
 						try:
 							Score[key]+= math.log10(df[ch1][key]/sum_column[key])
 						except:
-							Score[key]+= math.log10(smooth_value/sum_column[key])
+							if smooth_value!=0:
+								Score[key]+= math.log10(smooth_value/sum_column[key])
+							else:
+								Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 				if case2:
 					for key in Score:
 						try:
 							Score[key]+= math.log10(df[ch2][key]/sum_column[key])
 						except:
-							Score[key]+= math.log10(smooth_value/sum_column[key])
+							if smooth_value!=0:
+								Score[key]+= math.log10(smooth_value/sum_column[key])
+							else:
+								Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 				if case3:
 					for key in Score:
 						try:
 							Score[key]+= math.log10(df[ch3][key]/sum_column[key])
 						except:
-							Score[key]+= math.log10(smooth_value/sum_column[key])
+							if smooth_value!=0:
+								Score[key]+= math.log10(smooth_value/sum_column[key])
+							else:
+								Score[key]+= math.log10(0.000000000000000000000000000000000000000000000000000000000001)
 					
 			case1,case2,case3=False,False,False
 
@@ -1904,7 +2001,7 @@ def BYOM_bigram(smooth_value,training,testing,debug):
 		for test in training_lists:
 			if len(test.split("\t"))==4:
 				actual = test.split("\t")[2]
-				Score_test = initialize_score(sum_column,total_sentences)
+				Score_test = initialize_score(sentences_counter,total_sentences)
 				str_test = test.split("\t")[3]
 				for index,letter in enumerate(str_test):
 					if letter.isalpha():
@@ -1970,7 +2067,10 @@ def determine_word(word):
 
 if __name__ == '__main__':
 	if len(sys.argv)<4:
-		BYOM(0.09,None,None,False)
+		training=sys.argv[1]
+		testing = sys.argv[2]
+		BYOM(0.09,training,testing,False)
+		#BYOM_bigram(0.09,training,testing,False)
 	elif len(sys.argv)==4:
 		smooth_value = float(sys.argv[3])
 		size = int(sys.argv[2])
@@ -1981,7 +2081,8 @@ if __name__ == '__main__':
 			bigrams(V,smooth_value,False,None,None)
 		else:
 			trigrams(V,smooth_value,False,None,None)
-	elif len(sys.argv==6):
+
+	elif len(sys.argv)==6:
 		smooth_value = float(sys.argv[3])
 		size = int(sys.argv[2])
 		V = int(sys.argv[1])
