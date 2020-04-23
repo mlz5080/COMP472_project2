@@ -16,7 +16,6 @@ if __name__ == '__main__':
 	print("BYOM")	
 	subprocess.call(['python3', 'project2.py',"./OriginalDataSet/training-tweets.txt","./demo/test12.txt"])
 	
-	
 	print('python3', 'project2.py',str(0),str(1),str(0),"./OriginalDataSet/training-tweets.txt","./demo/test12.txt")
 	subprocess.call(['python3', 'project2.py',str(0),str(1),str(0),"./OriginalDataSet/training-tweets.txt","./demo/test12.txt"])
 
