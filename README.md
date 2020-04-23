@@ -2,7 +2,8 @@
 
  
 Original dataset test result folder and demo results folder  
-have all the files that I used to analyze
+have all the files that I used to analyze  
+472_Project2_Demo_40024810 folder has the required output during the demo
    
 usage: 
 To run the program  
