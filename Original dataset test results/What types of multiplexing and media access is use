@@ -1,0 +1,16 @@
+1.What types of multiplexing and media access is used in GSM and DECT systems ?
+
+GSM SDMA is used to assign MS to BS
+FDD to seperate uplink and downlink
+FDMA 124 channels, 200khz and TDMA 8, 577us time slots are used for media access. 
+
+DECT use TDD to separate upload and download, 24 slots, 12 uplink and 12 downlink
+10 carrier frequencies, 120 full duplex channels
+
+2.  Compared to the TCHs offered, standard GSM could provide a much higher data rate (33.8 kbit/s) when looking at the air interface. What lowers the data rates available to a user?
+
+Foward error correction is required to minimize the transmission error.
+Bandwith is also required for signalling and garding space.
+
+3.Why is a new infrastructure needed for GPRS, but not for HSCSD? Which components are new and what is their purpose?
+

@@ -1711,7 +1711,7 @@ def BYOM(smooth_value,training,testing,debug):
 
 		#print("Test result is:",max(Score),"with a score of",Score[max(Score)],"\nActual result is:",actual,"\n")
 	print("The accuracy is",correct_result/total)
-	with open("Demo_trace_BYOM_"+str(smooth_value)+".txt","w") as file:
+	with open("trace_BYOM_"+str(smooth_value)+".txt","w") as file:
 		file.write(output)
 
 	if debug:
@@ -1773,7 +1773,7 @@ def BYOM(smooth_value,training,testing,debug):
 			average_F1+= Recall[key][1] * 2 * pre_temp*re_temp/(pre_temp+re_temp)
 			eval_model+="{:.4f}".format(2 * pre_temp*re_temp/(pre_temp+re_temp))+"  "
 	eval_model+="\n"+ "{:.4f}".format(macro_F1/len(key_list)) +"  " + "{:.4f}".format(average_F1/total)
-	with open("Demo_eval_BYOM_.txt","w") as file:
+	with open("eval_BYOM_.txt","w") as file:
 		file.write(eval_model)
 
 def BYOM_bigram(smooth_value,training,testing,debug):
