@@ -2,5 +2,5 @@
 
 usage:  
 
-BYOM: python3 project2 <file path of training set> <file path of testing set>  
-N-gram model: python3 project2 <V> <size> <smooth_value> <file path of training set> <file path of testing set> 
+BYOM: python3 project2 <file_path_of_training_set> <file_path_of_testing_set>  
+N-gram model: python3 project2 <V_> <Size_> <smooth_value> <file_path_of_training_set> <file_path_of_testing_set>
